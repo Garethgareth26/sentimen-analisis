@@ -1,0 +1,42 @@
+{
+  "total_samples": 50,
+  "ok_count": 17,
+  "ng_count": 33,
+  "ok_ratio_percent": 34.0,
+  "ng_ratio_percent": 66.0,
+  "ng_breakdown": {
+    "over_gap": 29,
+    "under_gap": 4,
+    "resin_abnormal": 0
+  },
+  "cycle_time": {
+    "mean_sec": 0.7068,
+    "median_sec": 0.6916,
+    "min_sec": 0.6532,
+    "max_sec": 0.8158,
+    "p95_sec": 0.7882,
+    "std_sec": 0.0402,
+    "target_sec": 1.2,
+    "compliance_percent": 100.0
+  },
+  "keypoint_reliability": {
+    "four_keypoint_rate_percent": 100.0,
+    "mean_kpt_confidence": 0.9674,
+    "mean_bbox_confidence": 0.8986,
+    "min_kpt_confidence": 0.8577
+  },
+  "measurement_dimensions": {
+    "gap_mean_mm": 1.525,
+    "gap_min_mm": 0.643,
+    "gap_max_mm": 1.996,
+    "gap_std_mm": 0.415,
+    "upper_resin_mean_mm": 1.367,
+    "lower_resin_mean_mm": 1.873
+  },
+  "quality_pokayoke": {
+    "flow_out_rate_percent": 0.0,
+    "effective_tolerance_mm": "0.763 - 1.637",
+    "drawing_tolerance_mm": "0.7 - 1.7",
+    "jig_offset_mm": 0.063
+  }
+}

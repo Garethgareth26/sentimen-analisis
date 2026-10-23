@@ -1,0 +1,35 @@
+# Node.js dependencies
+node_modules/
+backend/node_modules/
+frontend/node_modules/
+
+# Production build artifacts
+dist/
+frontend/dist/
+build/
+
+# Python cache & virtualenv
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+*.egg-info/
+
+# Backup & duplicate files
+*.bak
+*.tmp
+*backup.xlsx
+* (6).xlsx
+
+# Temporary outputs & logs
+backend/output/*
+!backend/output/.gitkeep
+*.log
+
+# OS & IDE metadata
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

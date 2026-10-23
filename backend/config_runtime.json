@@ -1,0 +1,107 @@
+{
+  "scale_mm_per_pixel": 0.0234,
+  "standard": {
+    "min_distance_mm": 0.7,
+    "max_distance_mm": 1.7,
+    "jig_offset_mm": 0.063,
+    "min_resin_upper_mm": 0.2,
+    "min_resin_lower_mm": 0.2
+  },
+  "xray_crop": {
+    "mode": "ratio",
+    "left_px": 40,
+    "top_px": 30,
+    "right_ratio": 0.78,
+    "bottom_px": 10
+  },
+  "preprocessing": {
+    "enabled": true,
+    "normalize": true,
+    "contrast_alpha": 1,
+    "brightness_beta": 0,
+    "gamma": 1,
+    "clahe_enabled": true,
+    "clahe_clip_limit": 2,
+    "clahe_tile_grid_size": 8,
+    "blur_type": "gaussian",
+    "blur_kernel": 5,
+    "invert": false
+  },
+  "crosshair": {
+    "manual_scan_y": null,
+    "search_y_start_ratio": 0.35,
+    "search_y_end_ratio": 0.72,
+    "contrast_threshold": 10,
+    "measurement_y_offset_px": -9,
+    "band_height_px": 20
+  },
+  "edge_detection": {
+    "search_x_start_ratio": 0.1,
+    "search_x_end_ratio": 0.28,
+    "profile_smooth_kernel": 15,
+    "dark_threshold_percentile": 42,
+    "bright_threshold_percentile": 68,
+    "min_dark_run_px": 12,
+    "min_bright_run_px": 8,
+    "merge_gap_px": 3,
+    "bright_merge_gap_px": 3,
+    "min_dark_x_from_search_start_px": 20,
+    "start_offset_px": 0,
+    "end_offset_px": 0,
+    "fallback_gap_px": 40
+  },
+  "measurement_method": "yolo_keypoint",
+  "ai_model": {
+    "enabled": true,
+    "model_path": "models/best.pt",
+    "device": "cpu",
+    "input_mode": "full_raw",
+    "use_preprocessed_crop": false,
+    "confidence_threshold": 0.35,
+    "keypoint_confidence_threshold": 0.25,
+    "point_a_index": 0,
+    "point_b_index": 1,
+    "swap_points_if_needed": true,
+    "fallback_to_opencv": true,
+    "force_horizontal_line": true,
+    "force_vertical_line": true,
+    "horizontal_distance_only": true,
+    "outer_resin_edge_detection": true,
+    "outer_resin_search_px": 8
+  },
+  "jig_calibration": {
+    "jig_real_mm": 3.44,
+    "scan_x_start_ratio": 0.3,
+    "scan_x_end_ratio": 0.7,
+    "profile_smooth_kernel": 7,
+    "dark_threshold_percentile": 20,
+    "dark_threshold_multiplier": 1.5,
+    "min_jig_run_px": 20,
+    "merge_gap_px": 5,
+    "last_calibrated_at": "2026-10-19T00:29:28.379Z",
+    "last_jig_height_px": 147,
+    "last_scale_before": 0.0234,
+    "last_calibrated_by": "Operator Day Shift"
+  },
+  "active_part": {
+    "part_number": "DN-XRAY-42890-A",
+    "part_name": "Fuel Rail IC Housing (Standard)",
+    "min_distance_mm": 0.7,
+    "max_distance_mm": 1.7,
+    "jig_offset_mm": 0.063,
+    "ct_target_sec": 1.2,
+    "locked_at": "2026-10-19T00:29:57.661Z",
+    "locked_by": "Operator"
+  },
+  "storage": {
+    "storage_path": "output",
+    "save_option": "all",
+    "image_format": "png",
+    "qc_server_path": "output/qc_server_mock"
+  },
+  "plc": {
+    "enabled": false,
+    "port": "COM3 (RS-485 Modbus RTU)",
+    "signal_address": "Y001 / Relay Out #1"
+  }
+}

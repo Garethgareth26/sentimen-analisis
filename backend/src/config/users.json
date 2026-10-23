@@ -1,0 +1,46 @@
+{
+  "users": [
+    {
+      "npk": "1092",
+      "name": "Budi Santoso",
+      "role": "operator",
+      "department": "Production - Section X-Ray"
+    },
+    {
+      "npk": "1093",
+      "name": "Ahmad Fauzi",
+      "role": "operator",
+      "department": "Production - Section X-Ray"
+    },
+    {
+      "npk": "8021",
+      "name": "Sugimoto-san",
+      "role": "tl",
+      "department": "Quality Assurance - Team Leader"
+    },
+    {
+      "npk": "8022",
+      "name": "Hendra Wijaya",
+      "role": "tl",
+      "department": "Production - Group Leader"
+    },
+    {
+      "npk": "9999",
+      "name": "Admin PE Dept",
+      "role": "admin",
+      "department": "Process Engineering (PE/PED)"
+    },
+    {
+      "npk": "ADM001",
+      "name": "Admin PE",
+      "role": "admin",
+      "department": "Digital Transformation (DX) / PED"
+    },
+    {
+      "npk": "00 0000000002",
+      "name": "azril prau",
+      "role": "operator",
+      "department": "Production - Section X-Ray"
+    }
+  ]
+}

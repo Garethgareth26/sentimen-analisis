@@ -1,0 +1,24 @@
+[
+  {
+    "id": "TRF-279955",
+    "timestamp": "2026-10-12T04:27:59.955Z",
+    "targetDate": "2026-10-12",
+    "destinationPath": "C:\\QC_Server_Backup\\XRay_History",
+    "csvTransferred": 1,
+    "imagesTransferred": 37,
+    "totalTransferred": 38,
+    "status": "SUCCESS",
+    "message": "Berhasil mentransfer 38 file ke server QC/PED (C:\\QC_Server_Backup\\XRay_History)"
+  },
+  {
+    "id": "TRF-543263",
+    "timestamp": "2026-10-11T15:29:03.263Z",
+    "targetDate": "2026-10-11",
+    "destinationPath": "output/qc_server_mock",
+    "csvTransferred": 1,
+    "imagesTransferred": 36,
+    "totalTransferred": 37,
+    "status": "SUCCESS",
+    "message": "Berhasil mentransfer 37 file ke server QC/PED (output/qc_server_mock)"
+  }
+]
