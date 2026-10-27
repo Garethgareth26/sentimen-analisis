@@ -16,14 +16,10 @@ import CalibrationModal from './components/CalibrationModal';
 import AlarmInterlockModal from './components/AlarmInterlockModal';
 import ShiftChangeAlert from './components/ShiftChangeAlert';
 import HistoryModal from './components/HistoryModal';
-import OverRejectTestPage from './components/OverRejectTestPage';
-
 import { API } from './apiConfig.js';
 const api = axios.create({ baseURL: API, timeout: 180_000, withCredentials: true });
 
 export default function App() {
-  // ─── 0. View Mode (Dashboard Tray vs Evaluasi Over-Reject Single Test) ──────
-  const [activeView, setActiveView] = useState('dashboard'); // 'dashboard' | 'over_reject'
 
   // ─── 1. State Autentikasi & Shift ──────────────────────────────────────────
   const [currentUser, setCurrentUser] = useState(null);
@@ -199,6 +195,43 @@ export default function App() {
     return () => clearInterval(shiftInterval);
   }, [shiftInfo, currentUser]);
 
+  // ─── 8b. Real-time Auto-Detection Watcher (Kamera X-Ray / Drive Z:) ─────────
+  const [autoDetectEnabled, setAutoDetectEnabled] = useState(true);
+  const isAutoScanningRef = useRef(false);
+
+  useEffect(() => {
+    // Watcher aktif jika:
+    // 1. autoDetectEnabled === true
+    // 2. trayMode === 'live'
+    // 3. Operator sedang login
+    // 4. Tray scan TIDAK sedang berjalan (!scanningTray)
+    // 5. TIDAK dalam status alarm POKAYOKE (!alarmModalOpen)
+    if (!autoDetectEnabled || trayMode !== 'live' || !currentUser || scanningTray || alarmModalOpen) {
+      return;
+    }
+
+    const watcherInterval = setInterval(async () => {
+      if (scanningTray || alarmModalOpen || isAutoScanningRef.current) return;
+
+      try {
+        const resp = await api.get('/api/tray/check-new-batch');
+        if (resp.data?.ok && resp.data.hasNewBatch && resp.data.sequence?.length >= 15) {
+          console.log('[Auto-Detect] 16 Frame Baru Terdeteksi dari Mesin X-Ray (Drive Z:):', resp.data.sequence);
+          isAutoScanningRef.current = true;
+          // Tandai batch agar tidak di-trigger ganda
+          await api.post('/api/tray/mark-inspected', { signature: resp.data.signature }).catch(() => {});
+          // Langsung jalankan proses inspeksi AI saku demi saku tanpa menunggu tombol Run
+          await handleStartTrayScan(resp.data.sequence);
+          isAutoScanningRef.current = false;
+        }
+      } catch (err) {
+        isAutoScanningRef.current = false;
+      }
+    }, 1200); // Polling setiap 1.2 detik
+
+    return () => clearInterval(watcherInterval);
+  }, [autoDetectEnabled, trayMode, currentUser, scanningTray, alarmModalOpen]);
+
   // ─── 9. Handler Aksi Autentikasi ──────────────────────────────────────────
   function handleLoginSuccess(user, token, shift) {
     setCurrentUser(user);
@@ -343,16 +376,25 @@ export default function App() {
     }
   }
 
-  async function handleStartTrayScan() {
+  async function handleStartTrayScan(preloadedSequence = null) {
     if (scanningTray) return;
     setScanningTray(true);
 
     try {
-      // 1. Ambil 15/16 gambar berikutnya sesuai mode aktif (LIVE = 16 frame terbaru, DEMO = 15 dataset)
-      const seqResp = await api.get(`/api/tray/next-sequence?mode=${trayMode}`);
-      if (!seqResp.data.ok) throw new Error('Gagal mengambil sekuens tray dari sistem');
+      let sequence = preloadedSequence;
+      let trayId = null;
 
-      const { trayId, sequence } = seqResp.data;
+      if (!sequence || sequence.length === 0) {
+        // Ambil 15/16 gambar berikutnya sesuai mode aktif (LIVE = 16 frame terbaru, DEMO = 15 dataset)
+        const seqResp = await api.get(`/api/tray/next-sequence?mode=${trayMode}`);
+        if (!seqResp.data.ok) throw new Error('Gagal mengambil sekuens tray dari sistem');
+        trayId = seqResp.data.trayId;
+        sequence = seqResp.data.sequence;
+      } else {
+        const dayStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+        trayId = `TRAY-${dayStr}-${Date.now().toString().slice(-4)}`;
+      }
+
       const actualPartSeq = sequence.slice(0, 15);
 
       // 2. Siapkan 15 stasiun di grid dengan gambar yang akan diproses
@@ -562,6 +604,8 @@ export default function App() {
         metrics={metrics}
         trayMode={trayMode}
         onToggleTrayMode={handleToggleTrayMode}
+        autoDetectEnabled={autoDetectEnabled}
+        onToggleAutoDetect={() => setAutoDetectEnabled((prev) => !prev)}
         onOpenCalibration={() => setCalibModalOpen(true)}
         onOpenDandori={() => {
           setQrModalMode('kanban');
@@ -572,56 +616,45 @@ export default function App() {
         onResetTray={handleResetTray}
         scanningTray={scanningTray}
         scanningStationId={scanningStationId}
-        activeView={activeView}
-        onToggleView={() => setActiveView((prev) => (prev === 'over_reject' ? 'dashboard' : 'over_reject'))}
       />
 
-      {/* C. Konten Utama: Dashboard Tray Rotary ATAU Halaman Evaluasi Over-Reject */}
-      {activeView === 'over_reject' ? (
-        <OverRejectTestPage
-          onBackToDashboard={() => setActiveView('dashboard')}
-          activePart={activePart}
-          settings={settings}
-          currentUser={currentUser}
+      {/* C. Konten Utama: Dashboard Tray Rotary 18 Stasiun Denso */}
+      <main className="dashboard-body">
+        {/* Kolom 1: Tray Grid 18 Stasiun */}
+        <PocketGrid
+          stations={stations}
+          activeStationId={activeStationId}
+          onSelectStation={handleSelectStation}
+          scanningStationId={scanningStationId}
         />
-      ) : (
-        <main className="dashboard-body">
-          {/* Kolom 1: Tray Grid 18 Stasiun */}
-          <PocketGrid
-            stations={stations}
-            activeStationId={activeStationId}
-            onSelectStation={handleSelectStation}
-            scanningStationId={scanningStationId}
-          />
 
-          {/* Kolom 2: Area Viewport Citra Inspeksi Tengah */}
-          <ImageViewport
-            rawImageUrl={activeImageUrl}
-            resultImageUrl={activeResultImageUrl}
-            stationId={activeStationId}
-            loading={inferencing || (scanningTray && scanningStationId === activeStationId)}
-            onProcessNext={handleNextStation}
-          />
+        {/* Kolom 2: Area Viewport Citra Inspeksi Tengah */}
+        <ImageViewport
+          rawImageUrl={activeImageUrl}
+          resultImageUrl={activeResultImageUrl}
+          stationId={activeStationId}
+          loading={inferencing || (scanningTray && scanningStationId === activeStationId)}
+          onProcessNext={handleNextStation}
+        />
 
-          {/* Kolom 3: Panel Kontrol & Hasil Pengukuran Kanan */}
-          <ControlPanel
-            activeStation={activeStation}
-            activePart={activePart}
-            standardText={
-              `Std: ${activePart?.min_distance_mm ?? 0.7} - ${activePart?.max_distance_mm ?? 1.7} mm (${activePart?.part_number || 'DN-XRAY-42890-A'})`
-            }
-            onRecheck={handleRecheck}
-            onLearningAi={() => alert('Menu Learning AI (Fase 3 - Authenticated PE)')}
-            onPrevStation={handlePrevStation}
-            onNextStation={handleNextStation}
-            onResetNg={() => {
-              setAlarmStation(activeStation);
-              setAlarmModalOpen(true);
-            }}
-            isLeader={currentUser.role === 'tl' || currentUser.role === 'admin'}
-          />
-        </main>
-      )}
+        {/* Kolom 3: Panel Kontrol & Hasil Pengukuran Kanan */}
+        <ControlPanel
+          activeStation={activeStation}
+          activePart={activePart}
+          standardText={
+            `Std: ${activePart?.min_distance_mm ?? 0.7} - ${activePart?.max_distance_mm ?? 1.7} mm (${activePart?.part_number || 'DN-XRAY-42890-A'})`
+          }
+          onRecheck={handleRecheck}
+          onLearningAi={() => alert('Menu Learning AI (Fase 3 - Authenticated PE)')}
+          onPrevStation={handlePrevStation}
+          onNextStation={handleNextStation}
+          onResetNg={() => {
+            setAlarmStation(activeStation);
+            setAlarmModalOpen(true);
+          }}
+          isLeader={currentUser.role === 'tl' || currentUser.role === 'admin'}
+        />
+      </main>
 
       {/* ── Modal-Modal Sistem ───────────────────────────────────────────────── */}
 

@@ -29,6 +29,17 @@ export const trayController = {
     res.json({ ok: true, mode: updated });
   },
 
+  checkNewBatch(_req, res) {
+    const result = trayService.checkNewLiveBatch();
+    res.json({ ok: true, ...result });
+  },
+
+  markInspected(req, res) {
+    const { signature } = req.body || {};
+    const current = trayService.markBatchInspected(signature);
+    res.json({ ok: true, signature: current });
+  },
+
   getNextSequence(req, res) {
     const currentMode = req.query.mode || trayService.getTrayMode();
     let sequence = [];

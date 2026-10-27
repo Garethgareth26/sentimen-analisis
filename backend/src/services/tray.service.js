@@ -58,12 +58,18 @@ export function setTrayMode(mode) {
   return cleanMode;
 }
 
+let lastInspectedSignature = null;
+try {
+  if (fs.existsSync(CONFIG_PATH)) {
+    const cfg = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf-8'));
+    lastInspectedSignature = cfg.last_inspected_signature || null;
+  }
+} catch (_) {}
+
 /**
- * MODE LIVE (Mesin Kamera X-Ray Riil):
- * Mengambil 16 file citra TERBARU berdasarkan jam/waktu modifikasi (mtimeMs)
- * 15 file pertama adalah st1 s/d st15, file ke-16 adalah frame reset blur.
+ * Mengambil daftar file citra live terbaru beserta metadatanya (waktu pembuatan/modifikasi dan ukuran)
  */
-export function getLatestLiveImages(batchSize = 16) {
+export function getLatestLiveImagesWithMeta(batchSize = 16) {
   if (!fs.existsSync(INPUT_DIR)) return [];
   const files = fs.readdirSync(INPUT_DIR)
     .filter((f) => /\.(jpg|jpeg|png)$/i.test(f) && f !== '3.44.jpg' && !f.startsWith('.'))
@@ -71,23 +77,139 @@ export function getLatestLiveImages(batchSize = 16) {
       const fullPath = path.join(INPUT_DIR, name);
       try {
         const st = fs.statSync(fullPath);
-        return { name, mtimeMs: st.mtimeMs };
+        // Di Windows, saat file di-copy/paste, birthtimeMs/ctimeMs adalah jam kedatangan file
+        const fileTime = Math.max(st.mtimeMs || 0, st.birthtimeMs || 0, st.ctimeMs || 0);
+        return { name, fileTime, size: st.size || 0 };
       } catch (_) {
-        return { name, mtimeMs: 0 };
+        return { name, fileTime: 0, size: 0 };
       }
     })
-    .sort((a, b) => b.mtimeMs - a.mtimeMs); // Paling baru di atas
+    .sort((a, b) => b.fileTime - a.fileTime); // Urutkan paling baru di atas
 
   if (files.length === 0) return [];
+  return files.slice(0, batchSize);
+}
 
-  // Ambil maksimal 16 file paling baru yang baru dijepret kamera
-  const latestBatch = files.slice(0, batchSize);
+/**
+ * Menghitung signature unik batch untuk mendeteksi apakah file baru sudah pernah diinspeksi
+ */
+export function calculateBatchSignature(batchList) {
+  return batchList
+    .map((item) => `${item.name}:${Math.round(item.fileTime)}:${item.size}`)
+    .sort()
+    .join('|');
+}
 
-  // Urutkan kembali berdasarkan nama file (misal st1..st16 atau nomor sekuens)
-  // agar urutan stasiun tetap konsisten dari st1 ke st16
-  latestBatch.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+/**
+ * Menandai signature batch saat ini sebagai sudah diinspeksi
+ */
+export function markBatchInspected(signature) {
+  if (signature === '__RESET__' || signature === 'reset' || signature === '') {
+    lastInspectedSignature = null;
+    try {
+      if (fs.existsSync(CONFIG_PATH)) {
+        const cfg = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf-8'));
+        cfg.last_inspected_signature = null;
+        fs.writeFileSync(CONFIG_PATH, JSON.stringify(cfg, null, 2), 'utf-8');
+      }
+    } catch (_) {}
+    return null;
+  }
 
-  return latestBatch.map((item) => item.name);
+  if (!signature) {
+    const latest = getLatestLiveImagesWithMeta(16);
+    if (latest.length > 0) {
+      signature = calculateBatchSignature(latest);
+    }
+  }
+  if (signature) {
+    lastInspectedSignature = signature;
+    try {
+      if (fs.existsSync(CONFIG_PATH)) {
+        const cfg = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf-8'));
+        cfg.last_inspected_signature = signature;
+        fs.writeFileSync(CONFIG_PATH, JSON.stringify(cfg, null, 2), 'utf-8');
+      }
+    } catch (_) {}
+  }
+  return lastInspectedSignature;
+}
+
+/**
+ * MODE LIVE (Mesin Kamera X-Ray Riil):
+ * Mengambil 16 file citra TERBARU berdasarkan jam/waktu modifikasi (mtimeMs/birthtimeMs)
+ * 15 file pertama adalah st1 s/d st15, file ke-16 adalah frame reset blur.
+ */
+export function getLatestLiveImages(batchSize = 16) {
+  const meta = getLatestLiveImagesWithMeta(batchSize);
+  if (meta.length === 0) return [];
+  return meta
+    .map((item) => item.name)
+    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+}
+
+/**
+ * AUTO-DETECTION WATCHER:
+ * Mengecek apakah ada batch citra baru dari mesin X-Ray / Drive Z: yang siap diinspeksi secara otomatis
+ */
+export function checkNewLiveBatch() {
+  const mode = getTrayMode();
+  if (mode !== 'live') {
+    return { hasNewBatch: false, mode, reason: 'Mode saat ini adalah DEMO' };
+  }
+
+  // Sinkronkan status inspeksi tersimpan di config.json
+  try {
+    if (fs.existsSync(CONFIG_PATH)) {
+      const cfg = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf-8'));
+      if (cfg.last_inspected_signature !== undefined) {
+        lastInspectedSignature = cfg.last_inspected_signature;
+      }
+    }
+  } catch (_) {}
+
+  const latestMeta = getLatestLiveImagesWithMeta(16);
+  if (latestMeta.length < 15) {
+    return { hasNewBatch: false, mode, reason: `Jumlah file (${latestMeta.length}) kurang dari 15 pocket` };
+  }
+
+  // Cek apakah ada file 0-byte (masih sedang ditulis/transfer oleh Windows Network Share)
+  const hasIncompleteFile = latestMeta.some((f) => f.size < 500);
+  if (hasIncompleteFile) {
+    return { hasNewBatch: false, mode, reason: 'File masih dalam proses transfer jaringan (size < 500 byte)' };
+  }
+
+  // Debounce: Tunggu minimal 600ms sejak kedatangan file terakhir agar transfer selesai stabil
+  const newestFileTime = latestMeta[0].fileTime;
+  const ageMs = Date.now() - newestFileTime;
+  if (ageMs >= 0 && ageMs < 600) {
+    return { hasNewBatch: false, mode, reason: 'Menunggu transfer 16 file selesai stabil (debounce)' };
+  }
+
+  const signature = calculateBatchSignature(latestMeta);
+
+  if (signature === lastInspectedSignature) {
+    return {
+      hasNewBatch: false,
+      mode,
+      signature,
+      reason: 'Batch ini sudah diinspeksi sebelumnya'
+    };
+  }
+
+  // Urutkan nama file sesuai urutan pocket st1 s/d st16
+  const sortedNames = [...latestMeta]
+    .map((f) => f.name)
+    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+
+  return {
+    hasNewBatch: true,
+    mode,
+    signature,
+    batchSize: sortedNames.length,
+    sequence: sortedNames,
+    reason: 'Batch baru terdeteksi dari PC X-Ray / Drive Z:'
+  };
 }
 
 /**
@@ -177,6 +299,10 @@ export const trayService = {
   getAllDatasetImages,
   getNextTrayImages,
   getLatestLiveImages,
+  getLatestLiveImagesWithMeta,
+  calculateBatchSignature,
+  checkNewLiveBatch,
+  markBatchInspected,
   getTrayMode,
   setTrayMode,
 
@@ -400,6 +526,11 @@ export const trayService = {
     } catch (hErr) {
       console.warn('[TrayService] Gagal log batch ke history CSV:', hErr.message);
     }
+
+    // Tandai batch saat ini sebagai sudah diinspeksi agar auto-watcher tidak memicu ulang batch yang sama
+    try {
+      markBatchInspected();
+    } catch (_) {}
 
     return {
       currentTrayState,

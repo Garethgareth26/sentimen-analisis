@@ -1,20 +1,20 @@
 import React from 'react';
-import { Target, FileText, CheckCircle2, XCircle, Clock, Zap, Tag, Play, Loader2, RotateCcw, FlaskConical } from 'lucide-react';
+import { Target, FileText, CheckCircle2, XCircle, Clock, Zap, Tag, Play, Loader2, RotateCcw } from 'lucide-react';
 
 export default function RibbonBar({
   shiftInfo,
   metrics,
   trayMode = 'live',
   onToggleTrayMode,
+  autoDetectEnabled = true,
+  onToggleAutoDetect,
   onOpenCalibration,
   onOpenHistory,
   onOpenDandori,
   onStartTrayScan,
   onResetTray,
   scanningTray,
-  scanningStationId,
-  activeView = 'dashboard',
-  onToggleView
+  scanningStationId
 }) {
   const isDay = shiftInfo?.isDayShift ?? true;
   const total = metrics?.totalProduct || 0;
@@ -53,8 +53,41 @@ export default function RibbonBar({
             background: trayMode === 'live' ? '#10b981' : '#f59e0b',
             boxShadow: trayMode === 'live' ? '0 0 6px #10b981' : 'none'
           }} />
-          <span>{trayMode === 'live' ? 'LIVE (Terkini)' : 'DEMO (Acak)'}</span>
+          <span>{trayMode === 'live' ? 'LIVE (Kamera)' : 'DEMO (Simulasi)'}</span>
         </button>
+
+        {/* Indikator & Toggle Auto-Detect (Khusus Mode LIVE) */}
+        {trayMode === 'live' && (
+          <button
+            type="button"
+            className="ribbon-btn"
+            onClick={onToggleAutoDetect}
+            disabled={scanningTray}
+            style={{
+              background: autoDetectEnabled ? '#ecfdf5' : '#f8fafc',
+              color: autoDetectEnabled ? '#047857' : '#64748b',
+              borderColor: autoDetectEnabled ? '#a7f3d0' : '#cbd5e1',
+              fontWeight: 800,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+            title={autoDetectEnabled
+              ? 'Auto-Detect AKTIF: Saat 16 file baru masuk ke Drive Z: (PC X-Ray), sistem otomatis langsung membaca tanpa tekan tombol.'
+              : 'Auto-Detect NONAKTIF: Klik untuk mengaktifkan deteksi otomatis.'}
+          >
+            <span style={{
+              display: 'inline-block',
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              background: autoDetectEnabled ? '#10b981' : '#94a3b8',
+              boxShadow: autoDetectEnabled ? '0 0 8px #10b981' : 'none'
+            }} />
+            <span>{autoDetectEnabled ? 'AUTO: AKTIF' : 'AUTO: OFF'}</span>
+          </button>
+        )}
 
         <button
           type="button"
@@ -116,23 +149,6 @@ export default function RibbonBar({
         >
           <FileText size={16} />
           <span>History</span>
-        </button>
-
-        <button
-          type="button"
-          className="ribbon-btn"
-          onClick={onToggleView}
-          style={{
-            background: activeView === 'over_reject' ? '#15803d' : '#ecfdf5',
-            color: activeView === 'over_reject' ? '#ffffff' : '#047857',
-            borderColor: '#10b981',
-            fontWeight: 800,
-            boxShadow: activeView === 'over_reject' ? '0 2px 8px rgba(21, 128, 61, 0.35)' : 'none'
-          }}
-          title="Uji Foto Satu per Satu & Evaluasi Over-Reject (< 3%)"
-        >
-          <FlaskConical size={15} />
-          <span>{activeView === 'over_reject' ? 'Dashboard Tray' : 'Uji Single Foto'}</span>
         </button>
       </div>
 

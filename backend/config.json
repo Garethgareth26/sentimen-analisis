@@ -94,7 +94,7 @@
     "locked_by": "Operator"
   },
   "storage": {
-    "storage_path": "output",
+    "storage_path": "C:\\Users\\LENOVO\\Downloads\\doc_aixray_cleean",
     "save_option": "all",
     "image_format": "jpg",
     "qc_server_path": "output/qc_server_mock"
@@ -104,5 +104,6 @@
     "port": "COM3 (RS-485 Modbus RTU)",
     "signal_address": "Y001 / Relay Out #1"
   },
-  "tray_mode": "demo"
+  "tray_mode": "live",
+  "last_inspected_signature": ",9.jpg:1793070678253:155284|0.7l7865.jpg:1793070678965:154705|6.jpg:1793070677911:142028|78ltr8.jpg:1793070682419:44905|86rk8.jpg:1793070682780:44636|8kr8k.jpg:1793070679979:46039|8o6e5.jpg:1793070680803:47266|8r8k.jpg:1793070682054:45829|97.jpg:1793070676906:203457|e.jpg:1793070674830:151471|hg.jpg:1793070678625:153448|ik.jpg:1793070677333:151266|rk8.jpg:1793070679562:159492|v.jpg:1793070675286:155094|w.jpg:1793070674309:150003|z.jpg:1793070675874:154511"
 }
